@@ -1,5 +1,7 @@
 package com.journaldev.customlistview;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -8,6 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.NotificationCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
@@ -65,26 +68,21 @@ public class MainActivity extends AppCompatActivity {
         final Intent intention_details = new Intent(this, Details.class);
         listView=(ListView)findViewById(R.id.list);
 
-        //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
-        firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident");
-        if(currentUser.role.equals("user")) firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident").child(currentUser.username);
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
+        // check WIFI
+        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
+        if (activeNetwork!=null) {
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE)
+                // desable sync
+                ref.keepSynced(false);
+            else ref.keepSynced(true);// enable sync
+        }
 
-        /*if(accidents.size()==0) {
-            vehicules.add(new Vehicule("102546-101-19", "GHOUILA Nabil", "1548925", "Ancien", "Citroien", "Berlingo"));
-            vehicules.add(new Vehicule("509546-00-31", "BELKAID Aissa", "48925", "Nouveau", "Dacia", "Sendiro"));
-            vehicules.add(new Vehicule("132346-109-16", "BENFLAN Flan", "944925", "Ancien", "Renault", "Compus"));
+        firebaseAccident = ref.child("Accident");
 
-            accidents.add(new Accident(vehicules.get(0), "25/4/2017", "Babezzouar", "Des infos\nsur l'accident qui ...", "image1", "video1"));
-            accidents.add(new Accident(vehicules.get(1), "26/4/2017", "Dar elbeida", "Des infos sur\nl'accident qui ...", "image2", "video2"));
-            accidents.add(new AccidentDouble(vehicules.get(1), "27/4/2017", "Harrach", "Des infos sur la 2 accident\nqui ...", "image1", "video1", vehicules.get(2)));
+        if(currentUser.role.equals("user")) firebaseAccident = ref.child("Accident").child(currentUser.username);
 
-        } else {
-            Intent intention = getIntent();
-            if(intention!=null) {
-                final String message = intention.getStringExtra(NewAccidentForm.MESSAGE_SUPP_ADD);
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-            }
-        }*/
 
         adapter= new CustomAdapter(accidents, getApplicationContext());
 
@@ -100,44 +98,40 @@ public class MainActivity extends AppCompatActivity {
         firebaseAccident.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                // check WIFI
-                /*ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
-                if (activeNetwork!=null) {
-                    if (activeNetwork.getType()==ConnectivityManager.TYPE_WIFI) {*/
-                        accidents.clear();
+                accidents.clear();
 
-                        GenericTypeIndicator genericTypeIndicator = null;
-                        ArrayList<Post> postsUser = null;
-                        Map<String, ArrayList<Post>> postsAmin = null;
+                GenericTypeIndicator genericTypeIndicator = null;
+                ArrayList<Post> postsUser = null;
+                Map<String, ArrayList<Post>> postsAdmin = null;
+                ArrayList<Integer> aMettreEtatA0 = new ArrayList<Integer>(); //les accidents vont basculer à l'etat envoyé
+                try {
+                    if (currentUser.role.equals("user")) {
+                        genericTypeIndicator = new GenericTypeIndicator<ArrayList<Post>>() {};
+                        postsUser = (ArrayList<Post>) dataSnapshot.getValue(genericTypeIndicator);
+                        for (int i = 0; i < postsUser.size(); i++) {
+                            accidents.add(new Accident(postsUser.get(i).vehicule1, postsUser.get(i).date, postsUser.get(i).lieu, postsUser.get(i).infos, postsUser.get(i).type, postsUser.get(i).vehicule2, postsUser.get(i).mantant, postsUser.get(i).nomImage, postsUser.get(i).nomVideo, postsUser.get(i).etat));
+                        }
+                    } else { // admin
+                        genericTypeIndicator = new GenericTypeIndicator<Map<String, ArrayList<Post>>>() {};
+                        postsAdmin = (Map<String, ArrayList<Post>>) dataSnapshot.getValue(genericTypeIndicator);
 
-                        try {
-                            if (currentUser.role.equals("user")) {
-                                genericTypeIndicator = new GenericTypeIndicator<ArrayList<Post>>() {};
-                                postsUser = (ArrayList<Post>) dataSnapshot.getValue(genericTypeIndicator);
-                                for (int i = 0; i < postsUser.size(); i++) {
-                                    accidents.add(new Accident(postsUser.get(i).vehicule1, postsUser.get(i).date, postsUser.get(i).lieu, postsUser.get(i).infos, postsUser.get(i).type, postsUser.get(i).vehicule2, postsUser.get(i).mantant, postsUser.get(i).nomImage, postsUser.get(i).nomVideo));
-                                }
-                            } else { // admin
-                                genericTypeIndicator = new GenericTypeIndicator<Map<String, ArrayList<Post>>>() {};
-                                postsAmin = (Map<String, ArrayList<Post>>) dataSnapshot.getValue(genericTypeIndicator);
-
-                                for(Map.Entry<String, ArrayList<Post>> user : postsAmin.entrySet()) {
-                                    String username = user.getKey();
-                                    ArrayList<Post> userAccidents = user.getValue();
-
-                                    for (int i = 0; i < userAccidents.size(); i++) {
-                                        accidents.add(new Accident(userAccidents.get(i).vehicule1, userAccidents.get(i).date, userAccidents.get(i).lieu, userAccidents.get(i).infos, userAccidents.get(i).type, userAccidents.get(i).vehicule2, userAccidents.get(i).mantant, userAccidents.get(i).nomImage, userAccidents.get(i).nomVideo));
-                                    }
-                                }
+                        for(Map.Entry<String, ArrayList<Post>> user : postsAdmin.entrySet()) {
+                            String username = user.getKey();
+                            Log.i("Username", username);
+                            ArrayList<Post> userAccidents = user.getValue();
+                            for (int i = 0; i < userAccidents.size(); i++) {
+                                accidents.add(new Accident(userAccidents.get(i).vehicule1, userAccidents.get(i).date, userAccidents.get(i).lieu, userAccidents.get(i).infos, userAccidents.get(i).type, userAccidents.get(i).vehicule2, userAccidents.get(i).mantant, userAccidents.get(i).nomImage, userAccidents.get(i).nomVideo, postsUser.get(i).etat));
+                                if(userAccidents.get(i).etat == -1) aMettreEtatA0.add(i);
                             }
-                        } catch (Exception e) {Log.e("Error onDataChange", "java.util.ArrayList.size() on a null object reference");}
+                        }
+                    }
+                } catch (Exception e) {Log.e("Error onDataChange", "java.util.ArrayList.size() on a null object reference");}
 
-                        adapter.notifyDataSetChanged();
-                    /*}
-                    else if (activeNetwork.getType()==ConnectivityManager.TYPE_MOBILE) Toast.makeText(getApplicationContext(), "Attente de connexion Wifi", Toast.LENGTH_LONG);
-                         else  Toast.makeText(getApplicationContext(), "Aucune connexion n'est détectée", Toast.LENGTH_LONG); // TYPE_NOT_CONNETED
-                }*/
+                adapter.notifyDataSetChanged();
+                for(int i=0; i<aMettreEtatA0.size();i++){
+                    //accidents.get(aMettreEtatA0.get(i)).setEtat(0);// envoyé
+                }
+                aMettreEtatA0 = null;
             }
 
             @Override
@@ -215,5 +209,25 @@ public class MainActivity extends AppCompatActivity {
         String typeAccident = this.getText(R.string.type_seul).toString();
         intention3.putExtra(MESSAGE_SUPP, typeAccident);
         startActivity(intention3);
+    }
+
+    private void addNotification(String data, String title, String text) {
+        String message = "Votre accident est : " + data;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setSmallIcon(R.drawable.default_accident)
+                .setContentTitle(title+":")
+                .setContentText(text+":")
+                .setAutoCancel(true)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setContentText(message);
+
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(contentIntent);
+
+        // Add as notification
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.notify(0, builder.build());
     }
 }

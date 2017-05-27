@@ -484,16 +484,16 @@ public class NewAccidentForm extends AppCompatActivity {
             }
             
             MainActivity.vehicules.add(new Vehicule(matricule, nom, permis, nouveauAncien, marque, modele));
-            Accident accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size()-1), cal.getTime().toString(), lieu, mInfos.getText().toString(), "En conduite", null, 0.0f, imageNom, videoNom);
+            Accident accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size()-1), cal.getTime().toString(), lieu, mInfos.getText().toString(), "En conduite", null, 0.0f, imageNom, videoNom,0);
             if (type.equals("Double")) {
                 MainActivity.vehicules.add(new Vehicule(matricule2, nom2, permis2, nouveauAncien2, marque2, modele2));
-                accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size() - 2), cal.getTime().toString(), lieu, mInfos.getText().toString(), "En conduite", MainActivity.vehicules.get(MainActivity.vehicules.size() - 1), 0.0f, imageNom, videoNom);
+                accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size() - 2), cal.getTime().toString(), lieu, mInfos.getText().toString(), "En conduite", MainActivity.vehicules.get(MainActivity.vehicules.size() - 1), 0.0f, imageNom, videoNom,0);
             } else if (type.equals("Stationnement")){
                 if(mConnuInconnu.isChecked()) {
                     MainActivity.vehicules.add(new Vehicule(matricule2, nom2, permis, nouveauAncien2, marque2, modele2));
-                    accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size() - 2), cal.getTime().toString(), lieu, mInfos.getText().toString(), "Stationnement", MainActivity.vehicules.get(MainActivity.vehicules.size() - 1), 0.0f, imageNom, videoNom);
+                    accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size() - 2), cal.getTime().toString(), lieu, mInfos.getText().toString(), "Stationnement", MainActivity.vehicules.get(MainActivity.vehicules.size() - 1), 0.0f, imageNom, videoNom,0);
                 }else {
-                    accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size() - 1), cal.getTime().toString(), lieu, mInfos.getText().toString(), "Stationnement", null, 0.0f, imageNom, videoNom);
+                    accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size() - 1), cal.getTime().toString(), lieu, mInfos.getText().toString(), "Stationnement", null, 0.0f, imageNom, videoNom,0);
                 }
             }
 
@@ -593,16 +593,8 @@ public class NewAccidentForm extends AppCompatActivity {
 
 
     public void sendToFirebase(Accident accident){
-        // check WIFI
-        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
-
-        if (activeNetwork!=null) {
-            if (activeNetwork.getType()!=ConnectivityManager.TYPE_MOBILE) {
-                final int id = MainActivity.accidents.size();
-                MainActivity.firebaseAccident.child(String.valueOf(id)).setValue(accident);
-            }
-        }
+        final int id = MainActivity.accidents.size();
+        MainActivity.firebaseAccident.child(String.valueOf(id)).setValue(accident);
     }
 
 //------------------------------------------ Take Image & Record Video ------------------------------------------------------------

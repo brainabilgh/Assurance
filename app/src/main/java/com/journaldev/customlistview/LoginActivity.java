@@ -4,11 +4,14 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.LoaderManager;
+import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -75,13 +78,17 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        // check WIFI
+        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
 
         FirebaseDatabase instance = FirebaseDatabase.getInstance();
+
         try{instance.setPersistenceEnabled(true);}
         catch (Exception e) {
             Log.e("Error Firebase", "setPersistenceEnabled Must be the First");}
-        firebaseUser = instance.getReference().child("user");
 
+        firebaseUser = instance.getReference().child("user");
         // Read from Firebase
         firebaseUser.addValueEventListener(new ValueEventListener() {
             @Override

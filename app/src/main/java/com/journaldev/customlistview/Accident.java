@@ -15,11 +15,19 @@ public class Accident {
     private float mantant;
     private String nomImage;
     private String nomVideo;
+    private int etat=0;
+    /*
+    -2 refusé
+    -1 ouvert
+    0  envoyé
+    1  traitement
+    2  accepté
+    */
 
     public Accident() {
     }
 
-    public Accident(Vehicule vehicule1, String date, String lieu, String infos, String type, Vehicule vehicule2, float mantant, String nomImage, String nomVideo) {
+    public Accident(Vehicule vehicule1, String date, String lieu, String infos, String type, Vehicule vehicule2, float mantant, String nomImage, String nomVideo, int etat) {
         //this.id= id;
         this.vehicule1 = vehicule1;
         this.date = date;
@@ -30,6 +38,7 @@ public class Accident {
         this.type = type;
         this.vehicule2 = vehicule2;
         this.mantant = mantant;
+        this.etat = etat;
     }
 
 
@@ -103,5 +112,13 @@ public class Accident {
 
     public void setMantant(float mantant) {
         this.mantant = mantant;
+    }
+
+    public int getEtat() {
+        return etat;
+    }
+
+    public void setEtat(int etat) {
+        this.etat = etat;
     }
 }
