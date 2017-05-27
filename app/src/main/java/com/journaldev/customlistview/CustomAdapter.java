@@ -12,6 +12,11 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.firebase.ui.storage.images.FirebaseImageLoader;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -111,7 +116,16 @@ public class CustomAdapter extends ArrayAdapter<Accident> implements View.OnClic
 
         // charger l'image à droite de l'item
         if(accidentModele.getNomImage()==null) viewHolder.info.setImageResource(R.drawable.default_accident);
-        else viewHolder.info.setImageURI(MainActivity.defaultImage);
+        else{
+            // Reference to an image file in Firebase Storage
+            StorageReference storageReference = FirebaseStorage.getInstance().getReference().child("AllImages").child(accidentModele.getNomImage());
+            // Load the image using Glide
+            Glide.with(getContext() /* context */)
+                    .using(new FirebaseImageLoader())
+                    .load(storageReference)
+                    .into(viewHolder.info);
+            //mImage.setImageURI(MainActivity.defaultImage);
+        }
 
         /*viewHolder.info.setOnClickListener(new View.OnClickListener() {
             @Override

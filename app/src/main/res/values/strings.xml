@@ -44,4 +44,6 @@
     <string name="title_activity_log">Assurances</string>
     <string name="prompt_mantant">Mantant</string>
     <string name="pick_video_intent_text">Prendre une vidéo</string>
+
+    <item type="id" name="glide_tag" />
 </resources>
