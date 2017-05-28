@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private LocationManager lm;
     public static boolean notice = false;
     public static DatabaseReference firebaseAccident;
+    public static DatabaseReference firebaseExperts;
     public static PostUser currentUser = null;
     private double finalDistance = 0;
     public static boolean edit = false;
@@ -64,13 +65,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        //Start the service of localisation
-        if(!notice) {
-            initialiseReceiver();
-            addProximityAlert(lat, long1, nom);
-        }
-
 
         // recuperer les infos user et créer currentUser
         if (currentUser == null) {
@@ -102,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident");
         if (currentUser.role.equals("user"))
             firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident").child(currentUser.username);
+        firebaseExperts = FirebaseDatabase.getInstance().getReference().child("Experts");
 
 
         adapter = new CustomAdapter(accidents, getApplicationContext());
@@ -122,7 +117,33 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 return true;
             }
         });
+        
+        //Start the service of localisation
+        if(!notice) {
+            // Read from Firebase Experts
+            firebaseExperts.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    try {
+                        if (currentUser.role.equals("user")) {
+                            initialiseReceiver();
+                            GenericTypeIndicator genericTypeIndicator = new GenericTypeIndicator<ArrayList<PostExpert>>() {};
+                            ArrayList<PostExpert> postsExpert = (ArrayList<PostExpert>) dataSnapshot.getValue(genericTypeIndicator);
+                            for (int i = 0; i < postsExpert.size(); i++) {
+                                addProximityAlert(postsUser.get(i).latitude, postsUser.get(i).longitude, postsUser.get(i).nom);
+                            }
+                        } 
+                    } catch (Exception e) {Log.e("onDataChange", "java.util.ArrayList.size() on a null object reference");
+                }
 
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    System.out.println("The read failed: " + databaseError.getCode());
+                }
+            });       
+        }
+    }
+        
         // Read from Firebase
         firebaseAccident.addValueEventListener(new ValueEventListener() {
             @Override
