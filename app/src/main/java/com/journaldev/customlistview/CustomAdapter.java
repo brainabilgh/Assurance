@@ -1,6 +1,9 @@
 package com.journaldev.customlistview;
 
 import android.content.Context;
+import android.net.Uri;
+import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,9 +17,13 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.firebase.ui.storage.images.FirebaseImageLoader;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -83,7 +90,7 @@ public class CustomAdapter extends ArrayAdapter<Accident> implements View.OnClic
         // Get the data item for this position
         Accident accidentModele = getItem(position);
         // Check if an existing view is being reused, otherwise inflate the view
-        ViewHolder viewHolder; // view lookup cache stored in tag
+        final ViewHolder viewHolder; // view lookup cache stored in tag
 
         final View result;
 
@@ -117,14 +124,33 @@ public class CustomAdapter extends ArrayAdapter<Accident> implements View.OnClic
         // charger l'image à droite de l'item
         if(accidentModele.getNomImage()==null) viewHolder.info.setImageResource(R.drawable.default_accident);
         else{
-            // Reference to an image file in Firebase Storage
-            StorageReference storageReference = FirebaseStorage.getInstance().getReference().child("AllImages").child(accidentModele.getNomImage());
-            // Load the image using Glide
-            Glide.with(getContext() /* context */)
-                    .using(new FirebaseImageLoader())
-                    .load(storageReference)
-                    .into(viewHolder.info);
-            //mImage.setImageURI(MainActivity.defaultImage);
+            final File localFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/images/"+accidentModele.getNomImage());
+            // download and create if not exists :
+            if(!localFile.exists()) {
+                // Reference to an image file in Firebase Storage
+                StorageReference storageReference = FirebaseStorage.getInstance().getReference().child("AllImages").child(accidentModele.getNomImage());
+                // Load the image using Glide
+                //Glide.with(getContext() /* context */)
+                        /*.using(new FirebaseImageLoader())
+                        .load(storageReference)
+                        .into(viewHolder.info);*/
+                storageReference.getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                    @Override
+                    public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                        Log.i("Image", "Download Success");
+                        viewHolder.info.setImageURI(Uri.parse(localFile.getAbsolutePath()));
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                        // Handle any errors
+                        Log.e("Image", "Download Failed");
+                    }
+                });
+            } else {
+                try {viewHolder.info.setImageURI(Uri.parse(localFile.getAbsolutePath()));}
+                catch (OutOfMemoryError e) {Log.e("OutOfMemoryError", "Failed to allocate the necessary byte allocation");}
+            }
         }
 
         /*viewHolder.info.setOnClickListener(new View.OnClickListener() {

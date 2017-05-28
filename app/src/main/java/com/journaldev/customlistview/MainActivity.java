@@ -1,5 +1,6 @@
 package com.journaldev.customlistview;
 
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.NotificationCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
@@ -85,27 +87,22 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         final Intent intention_form = new Intent(this, NewAccidentForm.class);
         listView = (ListView) findViewById(R.id.list);
 
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
+        // check WIFI
+        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
+        if (activeNetwork!=null) {
+            if (activeNetwork.getType() == ConnectivityManager.TYPE_MOBILE)
+                // desable sync
+                ref.keepSynced(false);
+            else ref.keepSynced(true);// enable sync
+        }
+
         //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
-        firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident");
+        firebaseAccident = ref.child("Accident");
         if (currentUser.role.equals("user"))
-            firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident").child(currentUser.username);
+            firebaseAccident = firebaseAccident.child(currentUser.username);
 
-        /*if(accidents.size()==0) {
-            vehicules.add(new Vehicule("102546-101-19", "GHOUILA Nabil", "1548925", "Ancien", "Citroien", "Berlingo"));
-            vehicules.add(new Vehicule("509546-00-31", "BELKAID Aissa", "48925", "Nouveau", "Dacia", "Sendiro"));
-            vehicules.add(new Vehicule("132346-109-16", "BENFLAN Flan", "944925", "Ancien", "Renault", "Compus"));
-
-            accidents.add(new Accident(vehicules.get(0), "25/4/2017", "Babezzouar", "Des infos\nsur l'accident qui ...", "image1", "video1"));
-            accidents.add(new Accident(vehicules.get(1), "26/4/2017", "Dar elbeida", "Des infos sur\nl'accident qui ...", "image2", "video2"));
-            accidents.add(new AccidentDouble(vehicules.get(1), "27/4/2017", "Harrach", "Des infos sur la 2 accident\nqui ...", "image1", "video1", vehicules.get(2)));
-
-        } else {
-            Intent intention = getIntent();
-            if(intention!=null) {
-                final String message = intention.getStringExtra(NewAccidentForm.MESSAGE_SUPP_ADD);
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-            }
-        }*/
 
         adapter = new CustomAdapter(accidents, getApplicationContext());
 
@@ -130,48 +127,41 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         firebaseAccident.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                // check WIFI
-                /*ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
-                if (activeNetwork!=null) {
-                    if (activeNetwork.getType()==ConnectivityManager.TYPE_WIFI) {*/
                 accidents.clear();
 
                 GenericTypeIndicator genericTypeIndicator = null;
                 ArrayList<Post> postsUser = null;
-                Map<String, ArrayList<Post>> postsAmin = null;
 
+                Map<String, ArrayList<Post>> postsAdmin = null;
+                ArrayList<Integer> aMettreEtatA0 = new ArrayList<Integer>(); //les accidents vont basculer à l'etat envoyé
                 try {
                     if (currentUser.role.equals("user")) {
-                        genericTypeIndicator = new GenericTypeIndicator<ArrayList<Post>>() {
-                        };
+                        genericTypeIndicator = new GenericTypeIndicator<ArrayList<Post>>() {};
                         postsUser = (ArrayList<Post>) dataSnapshot.getValue(genericTypeIndicator);
                         for (int i = 0; i < postsUser.size(); i++) {
-                            accidents.add(new Accident(postsUser.get(i).vehicule1, postsUser.get(i).date, postsUser.get(i).lieu, postsUser.get(i).infos, postsUser.get(i).type, postsUser.get(i).vehicule2, postsUser.get(i).mantant, postsUser.get(i).nomImage, postsUser.get(i).nomVideo));
+                            accidents.add(new Accident(postsUser.get(i).vehicule1, postsUser.get(i).date, postsUser.get(i).lieu, postsUser.get(i).infos, postsUser.get(i).type, postsUser.get(i).vehicule2, postsUser.get(i).mantant, postsUser.get(i).nomImage, postsUser.get(i).nomVideo, postsUser.get(i).etat));
                         }
                     } else { // admin
-                        genericTypeIndicator = new GenericTypeIndicator<Map<String, ArrayList<Post>>>() {
-                        };
-                        postsAmin = (Map<String, ArrayList<Post>>) dataSnapshot.getValue(genericTypeIndicator);
+                        genericTypeIndicator = new GenericTypeIndicator<Map<String, ArrayList<Post>>>() {};
+                        postsAdmin = (Map<String, ArrayList<Post>>) dataSnapshot.getValue(genericTypeIndicator);
 
-                        for (Map.Entry<String, ArrayList<Post>> user : postsAmin.entrySet()) {
+                        for(Map.Entry<String, ArrayList<Post>> user : postsAdmin.entrySet()) {
                             String username = user.getKey();
+                            Log.i("Username", username);
                             ArrayList<Post> userAccidents = user.getValue();
-
                             for (int i = 0; i < userAccidents.size(); i++) {
-                                accidents.add(new Accident(userAccidents.get(i).vehicule1, userAccidents.get(i).date, userAccidents.get(i).lieu, userAccidents.get(i).infos, userAccidents.get(i).type, userAccidents.get(i).vehicule2, userAccidents.get(i).mantant, userAccidents.get(i).nomImage, userAccidents.get(i).nomVideo));
+                                accidents.add(new Accident(userAccidents.get(i).vehicule1, userAccidents.get(i).date, userAccidents.get(i).lieu, userAccidents.get(i).infos, userAccidents.get(i).type, userAccidents.get(i).vehicule2, userAccidents.get(i).mantant, userAccidents.get(i).nomImage, userAccidents.get(i).nomVideo, postsUser.get(i).etat));
+                                if(userAccidents.get(i).etat == -1) aMettreEtatA0.add(i);
                             }
                         }
                     }
-                } catch (Exception e) {
-                    Log.e("Error onDataChange", "java.util.ArrayList.size() on a null object reference");
-                }
+                } catch (Exception e) {Log.e("Error onDataChange", "java.util.ArrayList.size() on a null object reference");}
 
                 adapter.notifyDataSetChanged();
-                    /*}
-                    else if (activeNetwork.getType()==ConnectivityManager.TYPE_MOBILE) Toast.makeText(getApplicationContext(), "Attente de connexion Wifi", Toast.LENGTH_LONG);
-                         else  Toast.makeText(getApplicationContext(), "Aucune connexion n'est détectée", Toast.LENGTH_LONG); // TYPE_NOT_CONNETED
-                }*/
+                for(int i=0; i<aMettreEtatA0.size();i++){
+                    //accidents.get(aMettreEtatA0.get(i)).setEtat(0);// envoyé
+                }
+                aMettreEtatA0 = null;
             }
 
             @Override
@@ -252,6 +242,25 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         startActivity(intention3);
     }
 
+    private void addNotification(String data, String title, String text) {
+        String message = "Votre accident est : " + data;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setSmallIcon(R.drawable.default_accident)
+                .setContentTitle(title+":")
+                .setContentText(text+":")
+                .setAutoCancel(true)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setContentText(message);
+
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(contentIntent);
+
+        // Add as notification
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.notify(0, builder.build());
+    }
     //------------------------------------------------------------------- Localisation Service --------------------------------------------------------------------------//
     private void addProximityAlert(double latitude, double longitude, String poiName) {
 

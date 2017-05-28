@@ -3,6 +3,8 @@ package com.journaldev.customlistview;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -13,6 +15,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -60,6 +63,15 @@ public class Details extends AppCompatActivity {
         storagePath = "";
 
         final String indice = intention.getStringExtra(MainActivity.MESSAGE_SUPP);
+
+        // mise à jour de l'état et notif
+        if(MainActivity.currentUser.role.equals("admin")){
+            if(MainActivity.accidents.get(Integer.parseInt(indice)).getEtat()== -1 ||  MainActivity.accidents.get(Integer.parseInt(indice)).getEtat()!= 0){
+                // si état pas encore traité
+                MainActivity.accidents.get(Integer.parseInt(indice)).setEtat(1);
+            }
+        }
+
         mImage = (ImageView) findViewById(R.id.detail_image);
 
         if(MainActivity.accidents.get(Integer.parseInt(indice)).getNomImage()==null){
@@ -67,15 +79,19 @@ public class Details extends AppCompatActivity {
             Log.d("storageReferenceImage", "null");
         }
         else{
-            // Reference to an image file in Firebase Storage
-            StorageReference storageReference = storage.child("AllImages").child(MainActivity.accidents.get(Integer.parseInt(indice)).getNomImage());
-            Log.d("storageReferenceImage", MainActivity.accidents.get(Integer.parseInt(indice)).getNomImage()+" : "+storageReference.toString());
-            // Load the image using Glide
-            Glide.with(this /* context */)
-                    .using(new FirebaseImageLoader())
-                    .load(storageReference)
-                    .into(mImage);
-            //mImage.setImageURI(MainActivity.defaultImage);
+            final File localFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/images/"+MainActivity.accidents.get(Integer.parseInt(indice)).getNomImage());
+            // download and create if not exists :
+            if(!localFile.exists()) {
+                // Reference to an image file in Firebase Storage
+                StorageReference storageReference = storage.child("AllImages").child(MainActivity.accidents.get(Integer.parseInt(indice)).getNomImage());
+                Log.d("storageReferenceImage", MainActivity.accidents.get(Integer.parseInt(indice)).getNomImage() + " : " + storageReference.toString());
+                // Load the image using Glide
+                Glide.with(this /* context */)
+                        .using(new FirebaseImageLoader())
+                        .load(storageReference)
+                        .into(mImage);
+                //mImage.setImageURI(MainActivity.defaultImage);
+            } else mImage.setImageURI(Uri.parse(localFile.getAbsolutePath()));
         }
 
         if(MainActivity.accidents.get(Integer.parseInt(indice)).getNomVideo()!=null) { // si on a une video...
@@ -83,7 +99,6 @@ public class Details extends AppCompatActivity {
                 Log.d("storageReferenceVideo", MainActivity.accidents.get(Integer.parseInt(indice)).getNomVideo()+" : "+storageReference.toString());
 
                 final File localFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/videos/"+MainActivity.accidents.get(Integer.parseInt(indice)).getNomVideo());
-                //File.createTempFile("video", "mp4");
                 // download and create if not exists :
                 if(!localFile.exists()) {
                     storageReference.getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
@@ -191,5 +206,25 @@ public class Details extends AppCompatActivity {
         mVideo.setMediaController(mc);
         mVideo.setVideoURI(Uri.parse(localFile.getAbsolutePath().toString()));
         mVideo.start();
+    }
+
+    private void addNotification(String data, String title, String text) {
+        String message = "Votre accident est : " + data;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setSmallIcon(R.drawable.default_accident)
+                .setContentTitle(title+":")
+                .setContentText(text+":")
+                .setAutoCancel(true)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setContentText(message);
+
+        Intent notificationIntent = new Intent(this, Details.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(contentIntent);
+
+        // Add as notification
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.notify(0, builder.build());
     }
 }
