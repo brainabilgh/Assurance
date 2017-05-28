@@ -4,11 +4,16 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.NotificationCompat;
 import android.support.v7.widget.Toolbar;
@@ -18,14 +23,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.location.LocationListener;
 
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-
-import android.widget.Toast;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -34,10 +35,19 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.GenericTypeIndicator;
 import com.google.firebase.database.ValueEventListener;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LocationListener {
     boolean isFABOpen = false;
     public static final String MESSAGE_SUPP = "android.journaldev.customlistview.MESSAGE";
     public static final Uri defaultImage = Uri.parse("android.resource://com.journaldev.customlistview/" + R.drawable.cameraicon);
+
+    //Defining Latitude & Longitude & Expert's name
+    double lat = 36.718120,
+            long1 = 3.175237;
+    String nom = "GHOUILA Nabil";
+    private int radius = 1450;
+    public static String PROX_ALERT_INTENT = "com.journaldev.customlistview.MainActivity";
+    public static int requestCode = 300;
+    private LocationManager lm;
 
     public static DatabaseReference firebaseAccident;
     public static PostUser currentUser = null;
@@ -54,10 +64,14 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        //Start the service of localisation
+        initialiseReceiver();
+        addProximityAlert(lat, long1, nom);
+
         // recuperer les infos user et créer currentUser
-        if(currentUser==null){
+        if (currentUser == null) {
             Intent myIntent = getIntent();
-            currentUser = new PostUser( myIntent.getStringExtra("username"),
+            currentUser = new PostUser(myIntent.getStringExtra("username"),
                     myIntent.getStringExtra("password"),
                     myIntent.getStringExtra("role"));
             /*Log.d("Username", currentUser.username);
@@ -66,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         final Intent intention_details = new Intent(this, Details.class);
-        listView=(ListView)findViewById(R.id.list);
+        listView = (ListView) findViewById(R.id.list);
 
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
         // check WIFI
@@ -79,12 +93,13 @@ public class MainActivity extends AppCompatActivity {
             else ref.keepSynced(true);// enable sync
         }
 
+        //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
         firebaseAccident = ref.child("Accident");
+        if (currentUser.role.equals("user"))
+            firebaseAccident = firebaseAccident.child(currentUser.username);
 
-        if(currentUser.role.equals("user")) firebaseAccident = ref.child("Accident").child(currentUser.username);
 
-
-        adapter= new CustomAdapter(accidents, getApplicationContext());
+        adapter = new CustomAdapter(accidents, getApplicationContext());
 
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -102,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
 
                 GenericTypeIndicator genericTypeIndicator = null;
                 ArrayList<Post> postsUser = null;
+
                 Map<String, ArrayList<Post>> postsAdmin = null;
                 ArrayList<Integer> aMettreEtatA0 = new ArrayList<Integer>(); //les accidents vont basculer à l'etat envoyé
                 try {
@@ -162,29 +178,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void AccidentType1(View view) {
-        if(!isFABOpen){
+        if (!isFABOpen) {
             showFABMenu();
-        }else{
+        } else {
             closeFABMenu();
         }
     }
 
 
-    private void showFABMenu(){
-        isFABOpen=true;
+    private void showFABMenu() {
+        isFABOpen = true;
         findViewById(R.id.fab1).animate().translationY(-getResources().getDimension(R.dimen.standard_55));
         findViewById(R.id.fab2).animate().translationY(-getResources().getDimension(R.dimen.standard_105));
         findViewById(R.id.fab3).animate().translationY(-getResources().getDimension(R.dimen.standard_155));
     }
 
-    private void closeFABMenu(){
-        isFABOpen=false;
+    private void closeFABMenu() {
+        isFABOpen = false;
         findViewById(R.id.fab1).animate().translationY(0);
         findViewById(R.id.fab2).animate().translationY(0);
         findViewById(R.id.fab3).animate().translationY(0);
     }
+
     public void onBackPressed() {
-        if(isFABOpen){
+        if (isFABOpen) {
             closeFABMenu();
         } else
             super.onBackPressed();
@@ -230,4 +247,74 @@ public class MainActivity extends AppCompatActivity {
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         manager.notify(0, builder.build());
     }
+    //------------------------------------------------------------------- Localisation Service --------------------------------------------------------------------------//
+    private void addProximityAlert(double latitude, double longitude, String poiName) {
+
+        lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+        //for debugging...
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0.1f, this);
+
+        Bundle extras = new Bundle();
+        extras.putString("name", poiName);
+        extras.putInt("id", requestCode);
+        Intent intent = new Intent(PROX_ALERT_INTENT);
+        intent.putExtra(PROX_ALERT_INTENT, extras);
+        PendingIntent proximityIntent = PendingIntent.getBroadcast(getApplicationContext(), requestCode , intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        lm.addProximityAlert(
+                latitude, // the latitude of the central point of the alert region
+                longitude, // the longitude of the central point of the alert region
+                radius, // the radius of the central point of the alert region, in meters
+                5000, // time for this proximity alert, in milliseconds, or -1 to indicate no expiration
+                proximityIntent // will be used to generate an Intent to fire when entry to or exit from the alert region is detected
+        );
+        requestCode++;
+    }
+
+    private void initialiseReceiver()
+    {
+        IntentFilter filter = new IntentFilter(PROX_ALERT_INTENT);
+        registerReceiver(new ProximityIntentReceiver(), filter);
+    }
+    @Override
+
+    //just For debugging to See the distance between my actual position and the aproximit point
+    public void onLocationChanged(Location newLocation) {
+
+        Location old = new Location("OLD");
+        old.setLatitude(lat);
+        old.setLongitude(long1);
+
+        double distance = newLocation.distanceTo(old);
+        if (distance < radius) initialiseReceiver();
+        Log.i("MyTag", "Distance: " + distance);
+    }
+
+    @Override
+    public void onProviderDisabled(String arg0) {}
+
+    @Override
+    public void onProviderEnabled(String arg0) {}
+
+    @Override
+    public void onStatusChanged(String arg0, int arg1, Bundle arg2) {}
 }
