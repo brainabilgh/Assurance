@@ -41,9 +41,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     public static final String MESSAGE_SUPP = "android.journaldev.customlistview.MESSAGE";
     public static final Uri defaultImage = Uri.parse("android.resource://com.journaldev.customlistview/" + R.drawable.cameraicon);
 
-    //Defining Latitude & Longitude & Expert's name
-    double lat = 36.718120, long1 = 3.175237;
-    String nom = "Batata Soufiane";
     private int radius = 1450;
     public static String PROX_ALERT_INTENT = "com.journaldev.customlistview.MainActivity";
     public static int requestCode = 300;
