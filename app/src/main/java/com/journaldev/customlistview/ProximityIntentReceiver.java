@@ -36,7 +36,7 @@ public class ProximityIntentReceiver extends BroadcastReceiver {
 
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        Intent notificationIntent = new Intent(context, MainActivity.class);
+        Intent notificationIntent = new Intent(context, LoginActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         Notification.Builder builder = new Notification.Builder(context);
@@ -55,6 +55,7 @@ public class ProximityIntentReceiver extends BroadcastReceiver {
         builder.build();
         //here-------------------------------------
         notificationManager.notify( intent.getBundleExtra(MainActivity.PROX_ALERT_INTENT).getInt("id"), builder.build());
+        MainActivity.notice = true;
 
     }
 

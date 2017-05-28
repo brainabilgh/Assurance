@@ -93,13 +93,16 @@ public class NewAccidentForm extends AppCompatActivity {
     static final String AB = "abcdefghijklmnopqrstuvwxyz";
     static Random rnd = new Random();
 
-
+    String indiceForm;
     Intent camera_intent;
     Intent video_intent;
 
     private final int IMAGE_REQUEST_CODE = 100;
     private final int VIDEO_REQUEST_CODE = 200;
     // UI references.
+
+    Intent intention = getIntent();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,7 +113,7 @@ public class NewAccidentForm extends AppCompatActivity {
         final String type = intention.getStringExtra(MainActivity.MESSAGE_SUPP);
 
         Toast.makeText(this, "Type d'accident : "+ type, Toast.LENGTH_LONG).show();
-
+        if (MainActivity.edit) indiceForm = intention.getStringExtra(MainActivity.MESSAGE_SUPP);
         mMatricule = (EditText) findViewById(R.id.matricule);
         mMarque = (EditText) findViewById(R.id.marque);
         mModele= (EditText) findViewById(R.id.modele);
@@ -168,7 +171,7 @@ public class NewAccidentForm extends AppCompatActivity {
             }
         });
 
-        if(type.equals("Seul")) {
+        if(type.equals("Seul") || (MainActivity.edit && MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2() == null)) {
             ((ViewGroup) mMatricule2.getParent()).setVisibility(View.GONE);
             ((ViewGroup) mMarque2.getParent()).setVisibility(View.GONE);
             ((ViewGroup) mModele2.getParent()).setVisibility(View.GONE);
@@ -179,7 +182,7 @@ public class NewAccidentForm extends AppCompatActivity {
             ((ViewGroup) mNouveauAncien2.getParent()).setVisibility(View.GONE);
         }
 
-         if(!type.equals("Stationnement")) {
+         if(!type.equals("Stationnement") || (MainActivity.edit && MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2() == null)) {
             ((ViewGroup) mSeconVoitureConnu.getParent()).setVisibility(View.GONE);
             ((ViewGroup) mConnuInconnu.getParent()).setVisibility(View.GONE);
          }
@@ -260,6 +263,38 @@ public class NewAccidentForm extends AppCompatActivity {
                 startActivityForResult(video_intent, VIDEO_REQUEST_CODE);
             }
         });
+        if (MainActivity.edit) {
+                mMatricule.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getMatricule());
+                mMarque.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getMarque());
+                mModele.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getModele());
+                mNom.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getNomProprietaire());
+                mPermis.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getPermis());
+                mNouveauPermis.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getProprietaireNouveauPermis());
+                mLieu.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getLieu());
+                mDateInput.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getDate());
+                mInfos.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getInfos());
+                System.out.println(type + " Aissa");
+                //Integer.parseInt(type) == 1 || ((Integer.parseInt(type) == 2) && (mConnuInconnu.isChecked()))
+                if (MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2() != null) {
+                    mMatricule2.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2().getMatricule());
+                    mMarque2.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2().getMarque());
+                    mModele2.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2().getModele());
+                    mNom2.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2().getNomProprietaire());
+                    mPermis2.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2().getPermis());
+                    mNouveauPermis2.setText(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2().getProprietaireNouveauPermis());
+                }
+            if (MainActivity.currentUser.role.equals("admin")) {
+                mMatricule.setFocusable(false);
+                mMarque.setFocusable(false);
+                mModele.setFocusable(false);
+                mNom.setFocusable(false);
+                mPermis.setFocusable(false);
+                mNouveauPermis.setFocusable(false);
+                mLieu.setFocusable(false);
+                mDateInput.setFocusable(false);
+                mInfos.setFocusable(false);
+            }
+        }
     }
 
     //------------------------------------------ Upload image ------------------------------------------------------------

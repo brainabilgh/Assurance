@@ -42,14 +42,15 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     double lat = 36.718120,
             long1 = 3.175237;
     String nom = "GHOUILA Nabil";
-    private int radius = 1450;
+    private int radius = 1500;
     public static String PROX_ALERT_INTENT = "com.journaldev.customlistview.MainActivity";
     public static int requestCode = 300;
     private LocationManager lm;
-
+    public static boolean notice = false;
     public static DatabaseReference firebaseAccident;
     public static PostUser currentUser = null;
-
+    private double finalDistance = 0;
+    public static boolean edit = false;
     public static ArrayList<Accident> accidents = new ArrayList<Accident>();
     public static ArrayList<Vehicule> vehicules = new ArrayList<Vehicule>();
     ListView listView;
@@ -63,8 +64,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         setSupportActionBar(toolbar);
 
         //Start the service of localisation
-        initialiseReceiver();
-        addProximityAlert(lat, long1, nom);
+       // if(!notice) {
+            initialiseReceiver();
+            addProximityAlert(lat, long1, nom);
+       // }
+
 
         // recuperer les infos user et créer currentUser
         if (currentUser == null) {
@@ -78,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         }
 
         final Intent intention_details = new Intent(this, Details.class);
+        final Intent intention_form = new Intent(this, NewAccidentForm.class);
         listView = (ListView) findViewById(R.id.list);
 
         //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
@@ -112,6 +117,15 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             }
         });
 
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                edit = true;
+                intention_form.putExtra(MESSAGE_SUPP, String.valueOf(position));
+                startActivity(intention_form);
+                return true;
+            }
+        });
         // Read from Firebase
         firebaseAccident.addValueEventListener(new ValueEventListener() {
             @Override
@@ -263,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0.1f, this);
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 1, this);
 
         Bundle extras = new Bundle();
         extras.putString("name", poiName);
@@ -275,7 +289,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 latitude, // the latitude of the central point of the alert region
                 longitude, // the longitude of the central point of the alert region
                 radius, // the radius of the central point of the alert region, in meters
-                5000, // time for this proximity alert, in milliseconds, or -1 to indicate no expiration
+                -1, // time for this proximity alert, in milliseconds, or -1 to indicate no expiration
                 proximityIntent // will be used to generate an Intent to fire when entry to or exit from the alert region is detected
         );
         requestCode++;
@@ -296,7 +310,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         old.setLongitude(long1);
 
         double distance = newLocation.distanceTo(old);
-        if (distance < radius) initialiseReceiver();
+        if((distance-finalDistance > 10) && notice) {
+            notice = false;
+        }
+        finalDistance = distance;
+        //if (distance < radius) initialiseReceiver();
         Log.i("MyTag", "Distance: " + distance);
     }
 
