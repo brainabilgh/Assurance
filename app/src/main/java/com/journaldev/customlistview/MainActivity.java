@@ -1,5 +1,6 @@
 package com.journaldev.customlistview;
 
+//import android.app.NotificationManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -41,10 +42,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     public static final Uri defaultImage = Uri.parse("android.resource://com.journaldev.customlistview/" + R.drawable.cameraicon);
 
     //Defining Latitude & Longitude & Expert's name
-    double lat = 36.718120,
-            long1 = 3.175237;
-    String nom = "GHOUILA Nabil";
-    private int radius = 1500;
+    double lat = 36.718120, long1 = 3.175237;
+    String nom = "Batata Soufiane";
+    private int radius = 1450;
     public static String PROX_ALERT_INTENT = "com.journaldev.customlistview.MainActivity";
     public static int requestCode = 300;
     private LocationManager lm;
@@ -66,10 +66,10 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         setSupportActionBar(toolbar);
 
         //Start the service of localisation
-       // if(!notice) {
+        if(!notice) {
             initialiseReceiver();
             addProximityAlert(lat, long1, nom);
-       // }
+        }
 
 
         // recuperer les infos user et créer currentUser
@@ -99,9 +99,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         }
 
         //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
-        firebaseAccident = ref.child("Accident");
+        firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident");
         if (currentUser.role.equals("user"))
-            firebaseAccident = firebaseAccident.child(currentUser.username);
+            firebaseAccident = FirebaseDatabase.getInstance().getReference().child("Accident").child(currentUser.username);
 
 
         adapter = new CustomAdapter(accidents, getApplicationContext());
@@ -113,7 +113,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 startActivity(intention_details);
             }
         });
-
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
@@ -123,6 +122,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 return true;
             }
         });
+
         // Read from Firebase
         firebaseAccident.addValueEventListener(new ValueEventListener() {
             @Override
@@ -131,9 +131,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
                 GenericTypeIndicator genericTypeIndicator = null;
                 ArrayList<Post> postsUser = null;
-
                 Map<String, ArrayList<Post>> postsAdmin = null;
-                ArrayList<Integer> aMettreEtatA0 = new ArrayList<Integer>(); //les accidents vont basculer à l'etat envoyé
+                int etat = 0;
+                //ArrayList<String> aMettreEtatA0 = new ArrayList<String>(); //les accidents vont basculer à l'etat envoyé
                 try {
                     if (currentUser.role.equals("user")) {
                         genericTypeIndicator = new GenericTypeIndicator<ArrayList<Post>>() {};
@@ -144,24 +144,32 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                     } else { // admin
                         genericTypeIndicator = new GenericTypeIndicator<Map<String, ArrayList<Post>>>() {};
                         postsAdmin = (Map<String, ArrayList<Post>>) dataSnapshot.getValue(genericTypeIndicator);
-
                         for(Map.Entry<String, ArrayList<Post>> user : postsAdmin.entrySet()) {
                             String username = user.getKey();
-                            Log.i("Username", username);
                             ArrayList<Post> userAccidents = user.getValue();
                             for (int i = 0; i < userAccidents.size(); i++) {
-                                accidents.add(new Accident(userAccidents.get(i).vehicule1, userAccidents.get(i).date, userAccidents.get(i).lieu, userAccidents.get(i).infos, userAccidents.get(i).type, userAccidents.get(i).vehicule2, userAccidents.get(i).mantant, userAccidents.get(i).nomImage, userAccidents.get(i).nomVideo, postsUser.get(i).etat));
-                                if(userAccidents.get(i).etat == -1) aMettreEtatA0.add(i);
+                                etat = userAccidents.get(i).etat;
+                                Log.d("etat"+i, ""+etat);
+                                if (etat == -1){
+                                    //aMettreEtatA0.add(username+"_"+i);
+                                    Log.d(username, String.valueOf(i));
+                                    firebaseAccident.child(username).child(String.valueOf(i)).child("etat").setValue(0);
+                                    etat = 0;
+                                }
+                                accidents.add(new Accident(userAccidents.get(i).vehicule1, userAccidents.get(i).date, userAccidents.get(i).lieu, userAccidents.get(i).infos, userAccidents.get(i).type, userAccidents.get(i).vehicule2, userAccidents.get(i).mantant, userAccidents.get(i).nomImage, userAccidents.get(i).nomVideo, etat));
                             }
                         }
                     }
-                } catch (Exception e) {Log.e("Error onDataChange", "java.util.ArrayList.size() on a null object reference");}
+                } catch (Exception e) {Log.e("onDataChange", "java.util.ArrayList.size() on a null object reference");}
 
                 adapter.notifyDataSetChanged();
-                for(int i=0; i<aMettreEtatA0.size();i++){
+                /*for(int i=0; i<aMettreEtatA0.size();i++){
+                    String[] str = aMettreEtatA0.get(i).split("_");
+                    firebaseAccident.child(str[0]).child(str[1]).child("etat")
+                                    .setValue(0);
                     //accidents.get(aMettreEtatA0.get(i)).setEtat(0);// envoyé
                 }
-                aMettreEtatA0 = null;
+                aMettreEtatA0 = null;*/
             }
 
             @Override
@@ -286,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 1, this);
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000, 1, this);
 
         Bundle extras = new Bundle();
         extras.putString("name", poiName);
@@ -298,7 +306,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 latitude, // the latitude of the central point of the alert region
                 longitude, // the longitude of the central point of the alert region
                 radius, // the radius of the central point of the alert region, in meters
-                -1, // time for this proximity alert, in milliseconds, or -1 to indicate no expiration
+                5000, // time for this proximity alert, in milliseconds, or -1 to indicate no expiration
                 proximityIntent // will be used to generate an Intent to fire when entry to or exit from the alert region is detected
         );
         requestCode++;
@@ -319,11 +327,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         old.setLongitude(long1);
 
         double distance = newLocation.distanceTo(old);
-        if((distance-finalDistance > 10) && notice) {
-            notice = false;
-        }
-        finalDistance = distance;
-        //if (distance < radius) initialiseReceiver();
+        if (distance < radius) initialiseReceiver();
         Log.i("MyTag", "Distance: " + distance);
     }
 

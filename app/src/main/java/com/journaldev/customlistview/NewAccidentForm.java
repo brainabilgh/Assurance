@@ -4,6 +4,8 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.DatePickerDialog;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
@@ -18,6 +20,7 @@ import android.net.Uri;
 
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -102,6 +105,8 @@ public class NewAccidentForm extends AppCompatActivity {
     // UI references.
 
     Intent intention = getIntent();
+    private EditText mMantant;
+    private EditText mEtat;
 
 
     @Override
@@ -293,6 +298,11 @@ public class NewAccidentForm extends AppCompatActivity {
                 mLieu.setFocusable(false);
                 mDateInput.setFocusable(false);
                 mInfos.setFocusable(false);
+
+                mMantant = (EditText) findViewById(R.id.montant);
+                mEtat = (EditText) findViewById(R.id.etat);
+                mMantant.setVisibility(View.VISIBLE);
+                mEtat.setVisibility(View.VISIBLE);
             }
         }
     }
@@ -400,7 +410,7 @@ public class NewAccidentForm extends AppCompatActivity {
         String permis2 = "";
         String nouveauAncien2 = "";
 
-        if(!type.equals("Seul")) {
+        if(!type.equals("Seul") ||  (MainActivity.edit && MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule2() == null)) {
             matricule2 = mMatricule2.getText().toString();
             marque2 = mMarque2.getText().toString();
             modele2 = mModele2.getText().toString();
@@ -428,11 +438,11 @@ public class NewAccidentForm extends AppCompatActivity {
         }
         
         // -------------------------------------------------  2 ---------------------------------------------
-        if(!type.equals("Seul")) {
+        /*if(!type.equals("Seul")) {
             if (TextUtils.isEmpty(permis2)) {
-                mPermis2.setError(getString(R.string.error_field_required));
+                //mPermis2.setError(getString(R.string.error_field_required));
                 focusView = mPermis2;
-                cancel = true;
+                //cancel = true;
             }
 
             /*if (TextUtils.isEmpty(prenom2)) {
@@ -441,7 +451,7 @@ public class NewAccidentForm extends AppCompatActivity {
                 cancel = true;
             }*/
 
-            if (TextUtils.isEmpty(nom2)) {
+            /*if (TextUtils.isEmpty(nom2)) {
                 mNom2.setError(getString(R.string.error_field_required));
                 focusView = mNom2;
                 cancel = true;
@@ -458,7 +468,7 @@ public class NewAccidentForm extends AppCompatActivity {
                 focusView = mMarque2;
                 cancel = true;
             }
-        }
+        }*/
         // ------------------------------------------  2 ------------------------------------------------------------
         if (TextUtils.isEmpty(permis)) {
             mPermis.setError(getString(R.string.error_field_required));
@@ -517,7 +527,33 @@ public class NewAccidentForm extends AppCompatActivity {
                         Integer.valueOf(day_month_year[1]),
                         Integer.valueOf(day_month_year[0]));
             }
-            
+            if (MainActivity.currentUser.role.equals("admin") && MainActivity.edit) {
+                int etat = 1;
+                switch (mEtat.getText().toString()) {
+                    case "accepter": etat = 2;break;
+                    case "refuser": etat = -2;break;
+                    default: etat = 1;
+                }
+                    String message = "L'état de votre accident est: " + mEtat.getText().toString() +"/nMontant: "+ mMantant.getText().toString();
+                    NotificationCompat.Builder builder =
+                            new NotificationCompat.Builder(this)
+                                    .setContentTitle(mNom.getText().toString()+":")
+                                    .setAutoCancel(true)
+                                    .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                                    .setContentText(message)
+                                    .setSmallIcon(R.drawable.default_accident);
+
+                    Intent notificationIntent = new Intent(this, LoginActivity.class);
+                    PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT);
+                    builder.setContentIntent(contentIntent);
+
+                    // Add as notification
+                    NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    manager.notify(0, builder.build());
+                MainActivity.firebaseAccident.child(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getNomProprietaire()).child("0").child("etat").setValue(etat);
+                MainActivity.firebaseAccident.child(MainActivity.accidents.get(Integer.parseInt(indiceForm)).getVehicule1().getNomProprietaire()).child("0").child("mantant").setValue(String.valueOf(mMantant.getText().toString()));
+            }
             MainActivity.vehicules.add(new Vehicule(matricule, nom, permis, nouveauAncien, marque, modele));
             Accident accident = new Accident(MainActivity.vehicules.get(MainActivity.vehicules.size()-1), cal.getTime().toString(), lieu, mInfos.getText().toString(), "En conduite", null, 0.0f, imageNom, videoNom,0);
             if (type.equals("Double")) {

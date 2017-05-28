@@ -305,6 +305,38 @@
 
             </android.support.design.widget.TextInputLayout>
 
+            <android.support.design.widget.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/montant"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="25px"
+                    android:typeface="serif"
+                    android:textStyle="italic"
+                    android:hint="Montant"
+                    android:visibility="gone"
+                    android:inputType="number"/>
+
+            </android.support.design.widget.TextInputLayout>
+            <android.support.design.widget.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/etat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="25px"
+                    android:typeface="serif"
+                    android:textStyle="italic"
+                    android:hint="Etat"
+                    android:visibility="gone"/>
+
+            </android.support.design.widget.TextInputLayout>
+
             <ImageButton
                 android:id="@+id/buttonLoadPicture"
                 android:layout_width="100dp"

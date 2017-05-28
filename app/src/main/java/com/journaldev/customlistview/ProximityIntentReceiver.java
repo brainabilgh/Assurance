@@ -44,8 +44,6 @@ public class ProximityIntentReceiver extends BroadcastReceiver {
         builder.setContentIntent(pendingIntent);
         builder.setLights(Color.WHITE, 300, 1500);
         builder.setWhen(System.currentTimeMillis());
-        builder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
-        builder.setVibrate(new long[] { 1000, 1000, 1000, 1000, 1000 });
         builder.setTicker("this is ticker text");
         builder.setContentTitle("Proximité d'un expert !");
         builder.setContentText("Vous approchez de: M." +intent.getBundleExtra(MainActivity.PROX_ALERT_INTENT).get("name"));

@@ -4,12 +4,15 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.LoaderManager;
+//import android.content.Context;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+/*import android.net.ConnectivityManager;
+import android.net.NetworkInfo;*/
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;

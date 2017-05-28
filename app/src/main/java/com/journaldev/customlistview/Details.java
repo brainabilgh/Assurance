@@ -65,9 +65,11 @@ public class Details extends AppCompatActivity {
         final String indice = intention.getStringExtra(MainActivity.MESSAGE_SUPP);
 
         // mise à jour de l'état et notif
-        if(MainActivity.currentUser.role.equals("admin")){
+        if(MainActivity.currentUser.role.equals("admin")) {
+            //MainActivity.firebaseAccident.child(username).child(String.valueOf(i)).child("etat").setValue(0);
             if(MainActivity.accidents.get(Integer.parseInt(indice)).getEtat()== -1 ||  MainActivity.accidents.get(Integer.parseInt(indice)).getEtat()!= 0){
                 // si état pas encore traité
+                Log.d("Details", ""+MainActivity.accidents.get(Integer.parseInt(indice)).getEtat());
                 MainActivity.accidents.get(Integer.parseInt(indice)).setEtat(1);
             }
         }
